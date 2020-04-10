@@ -38,7 +38,7 @@ int main( void )
 
  //std::cout << StringCmp(&st, &st1);
 
-  for (size_t i = 0; i < 100; ++i)
+  for (size_t i = 0; i < 1; ++i)
     for (size_t j = 0; j < STR_SIZE; ++j)
       Find(&tbl, BUFFER + j);
  
