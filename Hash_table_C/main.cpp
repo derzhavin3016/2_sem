@@ -21,18 +21,6 @@ hash_t LyHash_cpp( const String *str )
 
 int main( void )
 {
-//for (size_t i = 0; i < STR_SIZE; ++i)
-//{
-//  hash_t h = LyHash(BUFFER + i);
-//  hash_t h2 = LyHash_cpp(BUFFER + i);
-//  if (h != h2)
-//  {
-//    printf("FUCK");
-//    return 1;
-//  }
-//}
-//
-//printf("YAY!!!");
 
  hash_table tbl;
 
