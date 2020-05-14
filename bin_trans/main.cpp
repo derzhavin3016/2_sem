@@ -1,6 +1,6 @@
 #include "TRANS/BIN_TR.h"
 
-const size_t NAME_SIZE = 100;
+const unsigned NAME_SIZE = 100;
 
 int main( void )
 {
@@ -11,7 +11,7 @@ int main( void )
   scanf_s("%s", filename, NAME_SIZE);
 
   in.Fill(filename);
-  buffer out(in.size);
+  buffer out(in.size * 10);
 
   Translate(in, out);
 
