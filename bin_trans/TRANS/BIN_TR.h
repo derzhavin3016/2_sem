@@ -2,28 +2,38 @@
 #define __BIN_TR__
 
 #include "../STRS/strings.h"
-#include "../../../!FST_SEM(C++)/Processor/proc.h"
+#include "../../../../!FST_SEM(C++)/Processor/proc.h"
 
-using uchar = unsigned char;
+const size_t JMP_SIZE = 1000;
 
+struct jmp_inf         // structure for store information about jumps
+{
+  char *old_ptr;      // pointer to jmp command in adasm code
+  char *new_ptr;      // pointer to jmp commande in x86 code
+  bool IsJmpMet;       // Flag variable:
+                       // true if jmp command has already met, false otherwise
+  int old_jmp;         // address to jump to in adasm code
+  int new_jmp;         // address to jump to in x86 code (relative)
+};
 
 
 struct buffer
 {
-  uchar *buf;
+  char *buf;
   size_t size;
+
 
   buffer( void );
 
-  buffer( size_t size );
+  buffer( size_t size, char init = 0 );
 
-  buffer( const buffer &bf ) = delete;
+  buffer( const buffer &bf ) = delete;  // because we don't need to copy any buffer
 
   void Fill( const char filename[] );
 
   bool Put( const char filename[] );
 
-  uchar & operator [] ( size_t index );
+  char & operator [] ( size_t index );
 
   buffer( buffer &&bf );
 
@@ -31,6 +41,8 @@ struct buffer
 };
 
 bool Translate( const buffer &in, buffer &out );
+
+void FillJmpTable( const buffer &in );
 
 // load bytes to buffer -> FillBuff (already exists)
 // in cycle check every byte and translate to x86 bytecodes
