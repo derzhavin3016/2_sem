@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
+#include <new>
 //#include "..\..\DEFS.h"
 
 #define IfEndStr(A) (A != '\0' && A != '\n')
@@ -21,7 +22,7 @@ struct String
   bool operator==( const String* s );
 };
 
-unsigned char * LoadAndCreateStrings( const char filename[], size_t *str_count, int *error_code );
+char * LoadAndCreateStrings( const char filename[], size_t *str_count, int *error_code );
 
 int StrCompareIf( const char s1[], const char s2[], char end_sym );
 
@@ -41,9 +42,9 @@ void DelCom( String *strs, size_t size, char end_value );
 
 void StrConcat( char Dest[], const char Src[] );
 
-bool PutBufToFile( const char file_name[], const unsigned char buf[], size_t buf_size );
+bool PutBufToFile( const char file_name[], const char buf[], size_t buf_size );
 
-unsigned char* FillBuf( const char file_in[], size_t *code_size );
+char* FillBuf( const char file_in[], size_t *code_size );
 
 int StrCompareBegin( unsigned char s1[], unsigned char s2[] );
 enum

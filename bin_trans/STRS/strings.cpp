@@ -13,17 +13,17 @@
  *       LACS_LENGTH_ERROR if error detected in length counting,
  *       LACS_FOPEN_ERROR if error is detected upon attempt to open file.
  */
-unsigned char * LoadAndCreateStrings( const char filename[], size_t *str_count, int *error_code )
+char * LoadAndCreateStrings( const char filename[], size_t *str_count, int *error_code )
 {
-  assert(filename != NULL);
-  assert(error_code != NULL);
+  assert(filename != nullptr);
+  assert(error_code != nullptr);
 
   FILE *f = fopen(filename, "rb");
 
-  if (f == NULL)
+  if (f == nullptr)
   {
     *error_code = LACS_FOPEN_ERROR;
-    return NULL;
+    return nullptr;
   }
 
   int len = FileLength(f);
@@ -31,17 +31,17 @@ unsigned char * LoadAndCreateStrings( const char filename[], size_t *str_count, 
   {
     fclose(f);
     *error_code = len;
-    return NULL;
+    return nullptr;
   }
 
-  unsigned char *buf = (unsigned char *)calloc(len + 1, sizeof(buf[0]));
-  if (buf == NULL)
+  char *buf =  new(std::nothrow) char[len + 1]{0};
+  if (buf == nullptr)
   {
     fclose(f);
     *error_code = LACS_BUF_MEMORY_ERROR;
     return NULL;
   }
-  len = (int)fread(buf, sizeof(buf[0]), len, f);
+  len = (int) fread(buf, sizeof(buf[0]), len, f);
 
   if (str_count != nullptr)
     *str_count = len;
@@ -353,7 +353,7 @@ void StrConcat( char Dest[], const char Src[] )
  * \return true if all is ok.
  * \return false otherwise.
  */
-bool PutBufToFile( const char file_name[], const unsigned char buf[], size_t buf_size )
+bool PutBufToFile( const char file_name[], const char buf[], size_t buf_size )
 {
   assert(file_name != nullptr);
   assert(buf != nullptr);
@@ -377,12 +377,12 @@ bool PutBufToFile( const char file_name[], const unsigned char buf[], size_t buf
  * \param [out] code_size    Pointer to size of code array
  * \return pointer to code array (nullptr if error is occured).
  */
-unsigned char* FillBuf( const char file_in[], size_t *code_size )
+char* FillBuf( const char file_in[], size_t *code_size )
 {
   assert(file_in != nullptr);
 
   int err = 0;
-  unsigned char *code = LoadAndCreateStrings(file_in, code_size, &err);
+  char *code = LoadAndCreateStrings(file_in, code_size, &err);
   if (code == nullptr)
     LACS_Process_Error(err);
 
