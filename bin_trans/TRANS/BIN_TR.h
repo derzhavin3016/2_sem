@@ -6,15 +6,6 @@
 
 const size_t JMP_SIZE = 1000;
 
-struct jmp_inf         // structure for store information about jumps
-{
-  char *old_ptr;      // pointer to jmp command in adasm code
-  char *new_ptr;      // pointer to jmp commande in x86 code
-  bool IsJmpMet;       // Flag variable:
-                       // true if jmp command has already met, false otherwise
-  int old_jmp;         // address to jump to in adasm code
-  int new_jmp;         // address to jump to in x86 code (relative)
-};
 
 
 struct buffer
@@ -44,10 +35,33 @@ bool Translate( const buffer &in, buffer &out );
 
 void FillJmpTable( const buffer &in );
 
+//////////////////////////////////////////////////////////////
 // load bytes to buffer -> FillBuff (already exists)
 // in cycle check every byte and translate to x86 bytecodes
 // create .exe
+//////////////////////////////////////////////////////////////
 
+struct jmp_inf         // structure for store information about jumps
+{
+  char *old_ptr;      // pointer to jmp command in adasm code
+  char *new_ptr;      // pointer to jmp command in x86 code
+  int old_jmp;         // address to jump to in adasm code
+  int new_jmp;         // address to jump to in x86 code (relative)
+};
+
+struct jmp_table
+{
+  jmp_inf table[JMP_SIZE];
+  size_t size;
+
+  jmp_table( void );
+
+  int JmpProcess( char *jmp_ptr, char *new_ptr );
+
+  int FindByDest( int old_jmp_addr, int new_jmp_addr );
+
+  bool PushOldInf( char *ptr, int dest_addr );
+};
 
 
 /* Debug memory allocation support */ 

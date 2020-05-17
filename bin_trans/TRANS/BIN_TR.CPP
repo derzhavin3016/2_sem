@@ -1,6 +1,9 @@
 #include "BIN_TR.h"
 
-jmp_inf jmp_table[JMP_SIZE] = {0};
+
+////// JUMP TABLE ////////////////////////
+jmp_table TABLE;
+//////////////////////////////////////////
 
 // default constructor
 buffer::buffer( void ) : buf(nullptr),
@@ -96,11 +99,11 @@ void FillJmpTable( const buffer &in )
       ++PC;                                       \
       {tbl_act;}                                  \
       break;
-
+    
     switch (ptr[PC])
     {
 
-
+      #include "../commands.h"
 
     default:
       printf("Incorrect opcode : %d\nPosition %zd\n", ptr[PC], PC);
@@ -121,5 +124,56 @@ buffer::~buffer( void )
     delete[] buf;
 }
 
+
+jmp_table::jmp_table( void ) : table{0},
+                               size(0)
+{
+}
+
+bool jmp_table::PushOldInf( char *ptr, int dest_addr )
+{
+  assert(size < JMP_SIZE);
+
+  table[size].old_ptr = ptr;
+  table[size++].old_jmp = dest_addr;
+
+  return true;
+}
+
+int jmp_table::FindByDest( int old_jmp_addr, int new_jmp_addr )
+{
+  // check all table, because one place in code can be
+  // destination for several jmps
+
+  for (size_t i = 0; i < size; ++i)
+    // check if the jmp destianations in adasm are equal
+    if (table[i].old_jmp == old_jmp_addr)
+    {
+      // check if the address of jmp in x86 code is valid
+      if (table[i].new_ptr != nullptr)
+        // insert in the address of jump it's destination address
+        *((int *)(table[i].new_ptr + 1)) = new_jmp_addr;
+      table[i].new_jmp = new_jmp_addr;
+    }
+
+  return -1;
+}
+
+/**
+ * \brief Processing jump function
+ * \param [in] jmp_ptr  - pointer to jmp command in adasm code
+ * \param [in, out] new_ptr - pointer to jmp command in x86 code
+ */
+int jmp_table::JmpProcess( char *jmp_ptr, char *new_ptr )
+{
+  for (size_t i = 0; i < size; ++i)
+    if (table[i].old_ptr == jmp_ptr)
+    {
+      table[i].new_ptr = new_ptr;
+      *((int *)new_ptr + 1) = table[i].new_jmp;
+      return (int)i;
+    }
+  return -1;
+} /* End of 'JmpProcess' function */
 
 // END OF 'BIN_TR.CPP' FILE
