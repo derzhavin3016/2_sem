@@ -3,6 +3,7 @@
 
 #include "../STRS/strings.h"
 #include "../../../../!FST_SEM(C++)/Processor/proc.h"
+#include "../opcodes.h"
 
 const size_t JMP_SIZE = 1000;
 
@@ -43,10 +44,10 @@ void FillJmpTable( const buffer &in );
 
 struct jmp_inf         // structure for store information about jumps
 {
-  char *old_ptr;      // pointer to jmp command in adasm code
-  char *new_ptr;      // pointer to jmp command in x86 code
-  int old_jmp;         // address to jump to in adasm code
-  int new_jmp;         // address to jump to in x86 code (relative)
+  char *adasm_ptr;    // pointer to jmp command in adasm code
+  char *x86_ptr;      // pointer to jmp command in x86 code
+  char *adasm_dest;   // pointer to jump to in adasm code
+  char *x86_dest;     // pointer to jump to in x86 code (relative, count from next command)
 };
 
 struct jmp_table
@@ -56,11 +57,11 @@ struct jmp_table
 
   jmp_table( void );
 
-  int JmpProcess( char *jmp_ptr, char *new_ptr );
+  int JmpProcess( char *adasm_ptr, char *x86_ptr );
 
-  int FindByDest( int old_jmp_addr, int new_jmp_addr );
+  bool CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp = false );
 
-  bool PushOldInf( char *ptr, int dest_addr );
+  bool PushOldInf( char *adasm_ptr, char *adasm_dest );
 };
 
 

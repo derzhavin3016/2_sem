@@ -60,12 +60,15 @@ bool Translate( const buffer &in, buffer &out )
 
   FillJmpTable(in);
 
+  bool IsJmp = false;
   for (size_t PC = 0; PC < in.size - 8;)
   {
-#define DEF_CMD(name, cde, action, table_act)       \
-    case cde:                                       \
-       ++PC;                                        \
-      {action;}                                     \
+#define DEF_CMD(name, cde, action, table_act)                                   \
+    case cde:                                                                   \
+      IsJmp = (cde == 40 || (cde >= 20 && cde <= 26));                          \
+      TABLE.CmdProcess(const_cast<char *>(&code_ptr[PC]), buf_out, IsJmp);      \
+      ++PC;                                                                     \
+      {action;}                                                                 \
       break;
 
     switch (code_ptr[PC])
@@ -90,7 +93,7 @@ bool Translate( const buffer &in, buffer &out )
  */
 void FillJmpTable( const buffer &in )
 {
-  char *ptr = in.buf + 8;
+  char *code_ptr = in.buf + 8;
 
   for (size_t PC = 0; PC < in.size - 8;)
   {
@@ -100,13 +103,13 @@ void FillJmpTable( const buffer &in )
       {tbl_act;}                                  \
       break;
     
-    switch (ptr[PC])
+    switch (code_ptr[PC])
     {
 
       #include "../commands.h"
 
     default:
-      printf("Incorrect opcode : %d\nPosition %zd\n", ptr[PC], PC);
+      printf("Incorrect opcode : %d\nPosition %zd\n", code_ptr[PC], PC);
       break;
 
     }
@@ -130,47 +133,66 @@ jmp_table::jmp_table( void ) : table{0},
 {
 }
 
-bool jmp_table::PushOldInf( char *ptr, int dest_addr )
+bool jmp_table::PushOldInf( char *adasm_ptr, char *adasm_dest )
 {
   assert(size < JMP_SIZE);
 
-  table[size].old_ptr = ptr;
-  table[size++].old_jmp = dest_addr;
+  table[size].adasm_ptr = adasm_ptr;
+  table[size++].adasm_dest = adasm_dest;
 
   return true;
 }
 
-int jmp_table::FindByDest( int old_jmp_addr, int new_jmp_addr )
+/**
+ * \brief Processing command function
+ * \param [in]      adasm_addr  - pointer to command in adasm code
+ * \param [in, out] x86_addr    - pointer to command in x86 code
+ * \param [in]      IsJmp       - flag value, true when command is jmp-type, false otherwise
+ */
+bool jmp_table::CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp /* = false */ )
 {
   // check all table, because one place in code can be
   // destination for several jmps
 
   for (size_t i = 0; i < size; ++i)
     // check if the jmp destianations in adasm are equal
-    if (table[i].old_jmp == old_jmp_addr)
+    if (table[i].adasm_dest == adasm_addr)
     {
       // check if the address of jmp in x86 code is valid
-      if (table[i].new_ptr != nullptr)
+      if (table[i].x86_ptr != nullptr)
+      {
+        int rel_x86_dest = static_cast<int>(x86_addr - table[i].x86_ptr - sizeof(int) - sizeof(char));
         // insert in the address of jump it's destination address
-        *((int *)(table[i].new_ptr + 1)) = new_jmp_addr;
-      table[i].new_jmp = new_jmp_addr;
+        *(reinterpret_cast<int *>(table[i].x86_ptr + 1)) = rel_x86_dest;
+      }
+      table[i].x86_dest = x86_addr;
+    }
+    else if (IsJmp && table[i].adasm_ptr == adasm_addr)
+    {
+      table[i].x86_ptr = x86_addr;
+      *reinterpret_cast<int *>(x86_addr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
+      return (int)i;
     }
 
-  return -1;
-}
+
+  return true;
+} /* End of 'CmdProcess' function */
 
 /**
  * \brief Processing jump function
- * \param [in] jmp_ptr  - pointer to jmp command in adasm code
- * \param [in, out] new_ptr - pointer to jmp command in x86 code
+ * \param [in] adasm_ptr  - pointer to jmp command in adasm code
+ * \param [in, out] x86_ptr - pointer to jmp command in x86 code
  */
-int jmp_table::JmpProcess( char *jmp_ptr, char *new_ptr )
+int jmp_table::JmpProcess( char *adasm_ptr, char *x86_ptr )
 {
   for (size_t i = 0; i < size; ++i)
-    if (table[i].old_ptr == jmp_ptr)
+    if (table[i].adasm_dest == adasm_ptr)
     {
-      table[i].new_ptr = new_ptr;
-      *((int *)new_ptr + 1) = table[i].new_jmp;
+    }
+    else if (table[i].adasm_ptr == adasm_ptr)
+    {
+      table[i].x86_ptr = x86_ptr;
+      *reinterpret_cast<int *>(x86_ptr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
       return (int)i;
     }
   return -1;
