@@ -429,6 +429,17 @@
 #define MUL_ESI 0xf7e6
 #define MUL_EDI 0xf7e7
 
+/////////////////DIV <REG>///////////////////////
+
+#define DIV_EAX 0xf7f0
+#define DIV_ECX 0xf7f1
+#define DIV_EDX 0xf7f2
+#define DIV_EBX 0xf7f3
+#define DIV_ESP 0xf7f4
+#define DIV_EBP 0xf7f5
+#define DIV_ESI 0xf7f6
+#define DIV_EDI 0xf7f7
+
 //////////////////XOR EAX, <REG>///////////////////////
 
 #define XOR_EAX_EAX 0x33c0
@@ -538,8 +549,7 @@
 #define JE_REL  0x0f84
 #define JNE_REL 0x0f85
 
-/////////////////CALL RELATIVE//////////////////////
+/////////////////CALL&RET//////////////////////
 
 #define CALL_REL 0xe8
-
-#define RET 0xc3
+#define RET      0xc3
