@@ -13,11 +13,13 @@
 
 #define ADD_DATA_SIZE(num) num += DATA_SIZE;
 
+#define ADD_DATA_PC PC += DATA_SIZE;
+
 #define INC_BT {INC_PC; INC_OUT;}
 
 #define ADD_BT {ADD_DATA_SIZE(PC) ADD_DATA_SIZE(buf_out)}
 
-#define ADD_OUT ADD_DATA_SIZE(buf_out)
+#define ADD_OUT(num) buf_out += num;
 
 #define CODE(i) (code_ptr[PC + (i)])
 
@@ -27,7 +29,13 @@
 
 #define CUR_OUT_CODE (*buf_out)
 
-#define PUT_OUT(CMD) CUR_OUT_CODE = CMD; INC_OUT;
+#define PUT_BYTE_CMD(COMND) {CUR_OUT_CODE = (char)COMND; INC_OUT;}
+
+#define PUT_WORD_CMD(COMND) {*reinterpret_cast<short *>(buf_out) = (short)COMND; ADD_OUT(2);}
+
+#define BYTE(COM) PUT_BYTE_CMD(COM)
+
+#define WORD(COM) PUT_WORD_CMD(COM)
 
 //---------------------------------------------------------------
 // IMPORTANT !!!!
@@ -43,7 +51,7 @@
 
 DEF_CMD(PUSH, 1, 
   {
-    PUT_OUT(PUSH);
+    PUT_BYTE_CMD(PUSH);
     TO_INT(buf_out) = TO_INT(code_ptr + PC);
     ADD_BT
   },
@@ -95,18 +103,19 @@ DEF_CMD(PUSH_RAM, 12,
 //  push [ax] or [bx] or [cx] or [dx] -> get from memory by reg location and push
 //  --------------x86----------------
 //  Somewhere in data  section:
-//  buf           dd 0 dup(RAM_SIZE)
+//  //  buf           dd 0 dup(RAM_SIZE) // just add 0 in data section in exe file
 //  ---------------------------------
-//  
-//  mov eax, dword ptr [reg] -> 
-//
+// mov ecx, offset buf
+// add ecx, reg
+// mov eax, dword ptr [ecx]
+// push eax
 
 DEF_CMD(ADD, 2,
   {
-    PUT_OUT(POP_EAX);
-    PUT_OUT(POP_ECX);
-    PUT_OUT(ADD_EAX_ECX);
-    PUT_OUT(PUSH_EAX);
+    PUT_BYTE_CMD(POP_EAX);
+    PUT_BYTE_CMD(POP_ECX);
+    PUT_WORD_CMD(ADD_EAX_ECX);
+    PUT_BYTE_CMD(PUSH_EAX);
   },
   {
   })
@@ -125,10 +134,10 @@ DEF_CMD(POP, 3,
     ADD_DATA_SIZE(PC);
   })
 
-
+    
 DEF_CMD(POP_RAM, 31,
   {
-
+     
   },
   {
     INC_PC;
@@ -140,10 +149,10 @@ DEF_CMD(POP_RAM, 31,
 
 DEF_CMD(SUB, 4,
   {
-    PUT_OUT(POP_EAX);
-    PUT_OUT(POP_ECX);
-    PUT_OUT(SUB_EAX_ECX);
-    PUT_OUT(PUSH_EAX);
+    PUT_BYTE_CMD(POP_EAX);
+    PUT_BYTE_CMD(POP_ECX);
+    PUT_WORD_CMD(SUB_EAX_ECX);
+    PUT_BYTE_CMD(PUSH_EAX);
   },
   {})
 
@@ -156,10 +165,10 @@ DEF_CMD(SUB, 4,
 //  
 DEF_CMD(MUL, 5,
   {
-    PUT_OUT(POP_EAX);
-    PUT_OUT(POP_ECX);
-    PUT_OUT(MUL_ECX);
-    PUT_OUT(PUSH_EAX);
+    BYTE(POP_EAX);
+    BYTE(POP_ECX);
+    WORD(MUL_ECX);
+    BYTE(PUSH_EAX);
   },
   {})
 // pop eax
@@ -171,13 +180,13 @@ DEF_CMD(MUL, 5,
 
 DEF_CMD(DIV, 6,
   {
-    PUT_OUT(POP_EAX);
-    PUT_OUT(POP_ECX);
-    PUT_OUT(PUSH_EDX);
-    PUT_OUT(XOR_EDX_EDX);
-    PUT_OUT(DIV_ECX);
-    PUT_OUT(POP_EDX);
-    PUT_OUT(PUSH_EAX);
+    PUT_BYTE_CMD(POP_EAX);
+    PUT_BYTE_CMD(POP_ECX);
+    PUT_BYTE_CMD(PUSH_EDX);
+    PUT_WORD_CMD(XOR_EDX_EDX);
+    PUT_WORD_CMD(DIV_ECX);
+    PUT_BYTE_CMD(POP_EDX);
+    PUT_BYTE_CMD(PUSH_EAX);
   },
   {})
 
@@ -194,6 +203,7 @@ DEF_CMD(OUT, 7,
   },
   {})
 
+//
 // call ToDec
 // 
 //
@@ -219,8 +229,9 @@ DEF_CMD(COS, 10,
 
 DEF_CMD(JMP, 20,
 {
-  PUT_OUT(JMP_REL);
-  ADD_OUT;
+  BYTE(JMP_REL);
+  ADD_OUT(4);
+  ADD_DATA_PC;
 },
 {
   JMP_FILL_TBL;
@@ -230,60 +241,69 @@ DEF_CMD(JMP, 20,
 //
 //
 
-#define DEF_JMP(name, cde)
-DEF_CMD(name, cde,
-  {
-
-  },
-  {
-    JMP_FILL_TBL;
-  }
+#define DEF_JMP(nme, cde)  \
+DEF_CMD(nme, cde,          \
+  {                        \
+    BYTE(POP_EAX)          \
+    BYTE(POP_ECX)          \
+    WORD(CMP_EAX_ECX)      \
+    WORD(nme##_REL)        \
+    ADD_OUT(4);            \
+    ADD_DATA_PC;           \
+  },                       \
+  {                        \
+    JMP_FILL_TBL;          \
+  }                        \
 )
 
-#if 0
-DEF_JMP(JA, 21, first > second)
-// pop eax
-// pop ecx
-// cmp eax, ecx
-// ja ...
+DEF_JMP(JA, 21)
+// pop eax byte
+// pop ecx byte
+// cmp eax, ecx  word
+// !  ja ...
 //
 
 
-DEF_JMP(JAE, 22, first >= second)
+DEF_JMP(JAE, 22)
 // pop eax
 // pop ecx
 // cmp eax, ecx
 // jae ..
 
 
-DEF_JMP(JB, 23, first < second)
+DEF_JMP(JB, 23)
 // pop eax
 // pop ecx
-// cmp eax, ecx
+// cmp eax, ec
 // jb ...
 
 
-DEF_JMP(JBE, 24, first <= second)
+DEF_JMP(JBE, 24)
 // pop eax
 // pop ecx
 // cmp eax, ecx
 // jbe .. 
 
-DEF_JMP(JE, 25, first == second)
+DEF_JMP(JE, 25)
 // pop eax
 // pop ecx
 // cmp eax, ebx
 // je ..
 
-DEF_JMP(JNE, 26, first != second)
+DEF_JMP(JNE, 26)
 // pop eax
 // pop ecx
 // cmp
 // jne ...
-#endif
+
+
+#undef DEF_JMP
 
 DEF_CMD(CALL, 40,
   {
+    BYTE(CALL_REL);
+    ADD_OUT(4);
+    ADD_DATA_PC;
   },
   {
     JMP_FILL_TBL;
@@ -293,14 +313,20 @@ DEF_CMD(CALL, 40,
 
 DEF_CMD(RET, 41,
   {
+    BYTE(RET);
   },
   {})
   // ret
 
-    DEF_CMD(IN, 42,
+DEF_CMD(IN, 42,
   {
   },
   {})
+
+// call ad6scanf
+// push eax
+// 
+
 
 DEF_CMD(POW, 43,
   {
