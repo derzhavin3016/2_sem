@@ -169,9 +169,16 @@ bool jmp_table::CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp /* = fa
     }
     else if (IsJmp && table[i].adasm_ptr == adasm_addr)
     {
-      table[i].x86_ptr = x86_addr;
-      *reinterpret_cast<int *>(x86_addr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
-      return (int)i;
+      char jmp_code = *(table[i].adasm_ptr);
+      char *x86_cond_addr = x86_addr;
+
+      if (jmp_code != 40 && jmp_code != 20)
+        x86_cond_addr += 4; // size of introduction commands for cond. jumps
+
+      table[i].x86_ptr = x86_cond_addr;
+      *reinterpret_cast<int *>(x86_cond_addr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
+      // because one jump can be in jmp table only one time as jmp
+      IsJmp = false;
     }
 
 
