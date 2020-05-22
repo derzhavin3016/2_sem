@@ -93,9 +93,9 @@ bool Translate( const buffer &in, buffer &out )
  */
 void FillJmpTable( const buffer &in )
 {
-  char *code_ptr = in.buf + 8;
+  char *code_ptr = in.buf;
 
-  for (size_t PC = 0; PC < in.size - 8;)
+  for (size_t PC = 8; PC < in.size;)
   {
 #define DEF_CMD(nm, cde, act, tbl_act)            \
     case cde:                                     \
@@ -110,7 +110,7 @@ void FillJmpTable( const buffer &in )
 
     default:
       printf("Incorrect opcode : %d\nPosition %zd\n", code_ptr[PC], PC);
-      break;
+      return;
 
     }
 
@@ -204,5 +204,12 @@ int jmp_table::JmpProcess( char *adasm_ptr, char *x86_ptr )
     }
   return -1;
 } /* End of 'JmpProcess' function */
+
+bool CreateExe( const char filename[], const buffer &out )
+{
+
+
+  return true;
+}
 
 // END OF 'BIN_TR.CPP' FILE

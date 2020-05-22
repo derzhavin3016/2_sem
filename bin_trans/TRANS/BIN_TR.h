@@ -4,10 +4,9 @@
 #include "../STRS/strings.h"
 #include "../../../../!FST_SEM(C++)/Processor/proc.h"
 #include "../opcodes.h"
+#include <windows.h>
 
 const size_t JMP_SIZE = 1000;
-
-
 
 struct buffer
 {
@@ -35,6 +34,8 @@ struct buffer
 bool Translate( const buffer &in, buffer &out );
 
 void FillJmpTable( const buffer &in );
+
+bool CreateExe( const char filename[], const buffer &out );
 
 //////////////////////////////////////////////////////////////
 // load bytes to buffer -> FillBuff (already exists)

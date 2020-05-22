@@ -29,9 +29,13 @@
 
 #define CUR_OUT_CODE (*buf_out)
 
-#define PUT_BYTE_CMD(COMND) {CUR_OUT_CODE = (char)COMND; INC_OUT;}
+#define PUT_BYTE_CMD(COMND) {CUR_OUT_CODE = (char)(COMND); INC_OUT;}
 
-#define PUT_WORD_CMD(COMND) {*reinterpret_cast<short *>(buf_out) = (short)COMND; ADD_OUT(2);}
+#define PUT_WORD_CMD(COMND)              \
+{                                        \
+  PUT_BYTE_CMD(((COMND) >> 8) & 0xff);   \
+  PUT_BYTE_CMD((COMND) & 0xff);          \
+}
 
 #define BYTE(COM) PUT_BYTE_CMD(COM)
 
@@ -62,7 +66,7 @@ DEF_CMD(PUSH, 1,
 #define CHECK_REG(nm, eax, ebx, ecx, edx)                                                       \
 {                                                                                               \
     char add = 0;                                                                              \
-    switch (CODE(-1))                                                                          \
+    switch (CODE(0))                                                                          \
     {                                                                                           \
     case 1:                                                                                     \
       add = eax;                                                                                \
@@ -77,7 +81,7 @@ DEF_CMD(PUSH, 1,
       add = edx;                                                                                \
       break;                                                                                    \
     default:                                                                                    \
-      printf("Unrecognized register to %s : %u\nPosition %zd", #nm, (unsigned)*code_ptr, PC);    \
+      printf("Unrecognized register to %s : %u\nPosition %zd", #nm, (unsigned)code_ptr[PC], PC);    \
       break;                                                                                    \
     }                                                                                           \
     *buf_out += add;                                                                            \
@@ -107,7 +111,7 @@ DEF_CMD(PUSH_RAM, 12,
 //  ---------------------------------
 // mov ecx, offset buf
 // add ecx, reg
-// mov eax, dword ptr [ecx]
+// mov eax, dword ptr  [ecx]
 // push eax
 
 DEF_CMD(ADD, 2,
@@ -131,7 +135,7 @@ DEF_CMD(POP, 3,
     CHECK_REG(pop, 6, 7, 1, 2)
   },
   {
-    ADD_DATA_SIZE(PC);
+    INC_PC;
   })
 
     
@@ -361,3 +365,7 @@ DEF_CMD(END, -1,
 #undef DEF_JMP
 
 #undef DEST_PROCESS
+
+#undef WORD
+
+#undef BYTE
