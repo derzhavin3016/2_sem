@@ -173,7 +173,7 @@ bool jmp_table::CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp /* = fa
       char *x86_cond_addr = x86_addr;
 
       if (jmp_code != 40 && jmp_code != 20)
-        x86_cond_addr += 4; // size of introduction commands for cond. jumps
+        x86_cond_addr += 5; // size of introduction commands for cond. jumps
 
       table[i].x86_ptr = x86_cond_addr;
       *reinterpret_cast<int *>(x86_cond_addr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
