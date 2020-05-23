@@ -173,7 +173,8 @@ bool jmp_table::CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp /* = fa
       char *x86_cond_addr = x86_addr;
 
       if (jmp_code != 40 && jmp_code != 20)
-        x86_cond_addr += 5; // size of introduction commands for cond. jumps
+        // size of introduction commands for cond. jumps
+        x86_cond_addr += 5; // pop, pop, cmp, half of cond jmp code
 
       table[i].x86_ptr = x86_cond_addr;
       *reinterpret_cast<int *>(x86_cond_addr + 1) = static_cast<int>(table[i].x86_dest - table[i].x86_ptr - sizeof(int) - sizeof(char));
@@ -205,11 +206,42 @@ int jmp_table::JmpProcess( char *adasm_ptr, char *x86_ptr )
   return -1;
 } /* End of 'JmpProcess' function */
 
+/**
+ * \brief Create an .exe file function.
+ * \param [in] filename   Name of an .exe file
+ * \param [in] out        Reference to buffer structure with x86 code.
+ * \return true if all is ok, false otherwise
+ **/
 bool CreateExe( const char filename[], const buffer &out )
 {
+  FILE *exe = fopen(filename, "wb");
 
+  if (exe == nullptr)
+    return printf("Problem with openning %s file", filename), true;
 
-  return true;
+  fwrite(&DOS_HEADER, sizeof(DOS_HEADER), 1, exe);
+  fwrite(&DOS_STUB,  sizeof(DOS_STUB[0]), sizeof(DOS_STUB)/sizeof(DOS_STUB[0]), exe);
+
+  fclose(exe);
+  return true; 
+} /* End of 'CreateExe' function */
+
+IMAGE_FILE_HEADER CreateFileHeader( void )
+{
+  IMAGE_FILE_HEADER FILE_HDR =
+  {
+  };
+  return FILE_HDR;
+}
+
+IMAGE_NT_HEADERS CreateNTHeader( void )
+{
+  IMAGE_NT_HEADERS PE_HEADER =
+  {
+    .Signature = '\0\0EP',
+    .FileHeader = 
+  };
+  return PE_HEADER;
 }
 
 // END OF 'BIN_TR.CPP' FILE
