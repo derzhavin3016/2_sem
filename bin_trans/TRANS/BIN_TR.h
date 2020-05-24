@@ -24,7 +24,7 @@ struct buffer
   void Fill( const char filename[] );
 
   bool Put( const char filename[] );
-
+	  
   char & operator [] ( size_t index );
 
   buffer( buffer &&bf );
@@ -38,10 +38,27 @@ void FillJmpTable( const buffer &in );
 
 bool CreateExe( const char filename[], const buffer &out );
 
-IMAGE_NT_HEADERS CreateNTHeader( void );
+IMAGE_NT_HEADERS CreateNTHeader( int NUM_OF_SEC );
 
-IMAGE_FILE_HEADER CreateFileHeader( void );
+IMAGE_FILE_HEADER CreateFileHeader( int NUM_OF_SEC );
 
+IMAGE_OPTIONAL_HEADER CreateOptHeader( void );
+
+IMAGE_SECTION_HEADER CreateSecHeader( const char sec_name[], size_t vrt_size, 
+                                      size_t vrt_addr,       size_t size_raw_data, 
+                                      size_t ptr_raw_data,   size_t charac );
+
+const size_t CODE_CHAR = IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ;
+
+const size_t DATA_CHAR = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_INITIALIZED_DATA;
+
+const size_t IDATA_CHAR = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
+
+const size_t ENTRY_POINT_ADDR = 0x1000;
+
+const size_t VRT_SIZE = 0x5000;
+
+const size_t SIZE_RAW = 0x1000;
 //////////////////////////////////////////////////////////////
 // load bytes to buffer -> FillBuff (already exists)
 // in cycle check every byte and translate to x86 bytecodes

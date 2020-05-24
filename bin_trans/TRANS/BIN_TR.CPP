@@ -214,32 +214,96 @@ int jmp_table::JmpProcess( char *adasm_ptr, char *x86_ptr )
  **/
 bool CreateExe( const char filename[], const buffer &out )
 {
+  const size_t stub_size = 30 * 16;
+  char stub[stub_size] = {0};
   FILE *exe = fopen(filename, "wb");
+  size_t vrt_addr = ENTRY_POINT_ADDR,
+         vrt_size = VRT_SIZE,
+         size_raw = SIZE_RAW,
+         ptr_raw  = 0x400;
+
 
   if (exe == nullptr)
     return printf("Problem with openning %s file", filename), true;
 
-  fwrite(&DOS_HEADER, sizeof(DOS_HEADER), 1, exe);
-  fwrite(&DOS_STUB,  sizeof(DOS_STUB[0]), sizeof(DOS_STUB)/sizeof(DOS_STUB[0]), exe);
+  fwrite(&DOS_HEADER,        sizeof(DOS_HEADER), 1, exe);
+  fwrite(&DOS_STUB,          sizeof(DOS_STUB[0]), sizeof(DOS_STUB)/sizeof(DOS_STUB[0]), exe);
+  fwrite(&CreateNTHeader(3), sizeof(IMAGE_NT_HEADERS), 1, exe);
 
+  fwrite(&CreateSecHeader(".text", vrt_size, vrt_addr, size_raw, ptr_raw, CODE_CHAR), 
+         sizeof(IMAGE_SECTION_HEADER), 1, exe);
+  fwrite(&CreateSecHeader(".idata", vrt_size, vrt_addr + vrt_size, size_raw, ptr_raw + size_raw, IDATA_CHAR), 
+         sizeof(IMAGE_SECTION_HEADER), 1, exe);
+  fwrite(&CreateSecHeader(".data", vrt_size, vrt_addr + 2 * vrt_size, size_raw, ptr_raw + 2 * size_raw, DATA_CHAR), 
+         sizeof(IMAGE_SECTION_HEADER), 1, exe);
+
+  fwrite(stub, sizeof(stub[0]), stub_size, exe);
+
+  fwrite(out.buf, sizeof(out.buf[0]), out.size, exe);
+
+  
   fclose(exe);
   return true; 
 } /* End of 'CreateExe' function */
 
-IMAGE_FILE_HEADER CreateFileHeader( void )
+IMAGE_FILE_HEADER CreateFileHeader( int NUM_OF_SEC )
 {
   IMAGE_FILE_HEADER FILE_HDR =
   {
+    .Machine = IMAGE_FILE_MACHINE_I386,
+    .NumberOfSections     = static_cast< WORD>(NUM_OF_SEC),
+    .TimeDateStamp        = static_cast<DWORD>(time(nullptr)),
+    .SizeOfOptionalHeader = sizeof(IMAGE_OPTIONAL_HEADER32),
+    .Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_32BIT_MACHINE
   };
   return FILE_HDR;
 }
 
-IMAGE_NT_HEADERS CreateNTHeader( void )
+IMAGE_OPTIONAL_HEADER CreateOptHeader( void )
+{
+  IMAGE_OPTIONAL_HEADER OPT_HDR =
+  {
+    .Magic = 0x10b,
+    .AddressOfEntryPoint = ENTRY_POINT_ADDR,
+    .ImageBase =  0x00400000,
+    .SectionAlignment = ENTRY_POINT_ADDR,
+    .FileAlignment = 0x200,
+    .MajorSubsystemVersion = 4,
+    .SizeOfImage = 0x4000,
+    .SizeOfHeaders = 0x400,
+    .Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI,
+    .NumberOfRvaAndSizes = 0x10,
+  };
+  OPT_HDR.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = ENTRY_POINT_ADDR + VRT_SIZE;
+
+  return OPT_HDR;
+}
+
+IMAGE_SECTION_HEADER CreateSecHeader( const char sec_name[], size_t vrt_size, 
+                                      size_t vrt_addr,       size_t size_raw_data, 
+                                      size_t ptr_raw_data,   size_t charac )
+{
+  IMAGE_SECTION_HEADER SEC_HDR =
+  {
+    .VirtualAddress   = vrt_addr,
+    .SizeOfRawData    = size_raw_data,
+    .PointerToRawData = ptr_raw_data,
+    .Characteristics  = charac
+  };
+
+  sprintf_s((char * const)SEC_HDR.Name, (size_t)IMAGE_SIZEOF_SHORT_NAME, "%s", sec_name); 
+  SEC_HDR.Misc.VirtualSize = vrt_size;
+
+  return SEC_HDR;
+}
+
+IMAGE_NT_HEADERS CreateNTHeader( int NUM_OF_SEC )
 {
   IMAGE_NT_HEADERS PE_HEADER =
   {
-    .Signature = '\0\0EP',
-    .FileHeader = 
+    .Signature      = '\0EP\0',
+    .FileHeader     = CreateFileHeader(NUM_OF_SEC),
+    .OptionalHeader = CreateOptHeader()
   };
   return PE_HEADER;
 }
