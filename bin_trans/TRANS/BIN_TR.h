@@ -6,6 +6,7 @@
 #include "../opcodes.h"
 #include <windows.h>
 #include <time.h>
+#include <new>
 
 const size_t JMP_SIZE = 1000;
 
@@ -54,11 +55,155 @@ const size_t DATA_CHAR = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CN
 
 const size_t IDATA_CHAR = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
 
+const size_t IMAGE_BASE = 0x00400000;
+
 const size_t ENTRY_POINT_ADDR = 0x1000;
 
 const size_t VRT_SIZE = 0x5000;
 
 const size_t SIZE_RAW = 0x1000;
+
+const size_t DATA_START = VRT_SIZE * 2 + ENTRY_POINT_ADDR;
+
+const size_t IMPORT_START = VRT_SIZE + ENTRY_POINT_ADDR;
+//////////////////////////////////////////////////////////////
+///IMPORT BY NAME
+struct import_name
+{
+  WORD Hint;
+  const CHAR *Name;
+	size_t size;
+
+  import_name( const char name[], size_t size, WORD hnt = 0 ) : Hint(hnt), Name(name), size(size)
+  {
+  }
+
+	void Fill( const char name[], size_t size, WORD hnt = 0 )
+	{
+	  Name = name;
+		this->size = size;
+		Hint = hnt;
+	}
+
+  size_t PutInFile( FILE *file )
+  {
+    if (file == nullptr)
+      return 0;
+		fwrite(&Hint, sizeof(WORD), 1, file);
+    fwrite(Name, sizeof(char), size, file);
+		char zero = 0;
+		fwrite(&zero, sizeof(zero), 1, file);
+    return size;
+  }
+};
+//////////////////////////////////////////////////////////////
+///Import table
+class imprt_tbl
+{
+private:
+  size_t size;
+  IMAGE_IMPORT_DESCRIPTOR *table;
+  import_name *name_imp;
+	size_t names_size;
+  IMAGE_THUNK_DATA64 *thunk;
+	size_t align_size;
+
+public:
+  imprt_tbl( size_t sz = 5 ) : size(sz + 1), name_imp(nullptr), names_size(0), align_size(0)
+  {
+    table    = (IMAGE_IMPORT_DESCRIPTOR *)calloc(sz + 1, sizeof(IMAGE_IMPORT_DESCRIPTOR));
+		name_imp = (import_name *)            calloc(sz, sizeof(import_name));
+    thunk    = (IMAGE_THUNK_DATA64 *)       calloc(sz, sizeof(thunk[0]));
+  }
+
+  bool FillDefault( void )
+  {
+    FillDefNames();
+		size_t tbl_size = sizeof(table[1]) * size;
+		size_t thunks_size = sizeof(thunk[1]) * (size - 1);
+		size_t names_start = IMPORT_START + tbl_size + thunks_size;
+		size_t fst_thunk_start = names_start + names_size;
+		size_t name_rva = fst_thunk_start + thunks_size;
+		size_t cur_name_size = 0;
+
+		for (size_t i = 0; i < size - 1; ++i)
+		{
+		  table[i].OriginalFirstThunk = IMPORT_START + tbl_size + i * sizeof(thunk[1]);
+      table[i].FirstThunk = fst_thunk_start + i * sizeof(thunk[1]);
+		  table[i].Name = name_rva;
+			thunk[i].u1.AddressOfData = (names_start + cur_name_size);
+			cur_name_size += name_imp[i].size + 1 + 2;
+		}
+    return true;
+  }
+
+	void FillDefNames( void )
+	{
+		name_imp[0].Fill("ExitProcess", 11);
+		name_imp[1].Fill("WriteConsoleA", 13);
+		name_imp[2].Fill("ReadConsoleA", 12);
+		name_imp[3].Fill("ToDec", 5);
+		name_imp[4].Fill("ad6scanf", 8);
+
+		for (size_t i = 0; i < size - 1; ++i)
+			names_size += name_imp[i].size + 1 + 2;
+	}
+
+	bool PutInFile( FILE *file ) //DEfault
+	{
+		if (file == nullptr)
+			return false;
+
+		const size_t dll_name_size = 11;
+		const size_t stub_size = 1 + SIZE_RAW - (sizeof(table[0]) * size + 2 * sizeof(thunk[1]) * (size - 1) + names_size + dll_name_size);
+		char *stub = new char[stub_size]{0};
+
+		fwrite(table, sizeof(table[0]), size, file);
+
+		fwrite(thunk, sizeof(thunk[0]), size - 1, file);
+
+		for (size_t i = 0; i < size - 1; ++i)
+			name_imp[i].PutInFile(file);
+
+		fwrite(thunk, sizeof(thunk[0]), size - 1, file);
+
+		fprintf(file, "ad6lib.dll\0");
+
+		fwrite(stub, sizeof(stub[0]), stub_size, file);
+
+		delete[] stub;
+		return true;
+	}
+
+	unsigned GetProcAddr( size_t num )
+	{
+		return sizeof(table[0]) * size + sizeof(thunk[0]) * (size - 1) + names_size + num * sizeof(thunk[0]);
+	}
+
+  ~imprt_tbl( void )
+  {
+    if (table != nullptr)
+    {
+      free(table);
+      table = nullptr;
+    }
+    if (name_imp != nullptr)
+    {
+      free(name_imp);
+      name_imp = nullptr;
+    }
+    if (thunk != nullptr)
+    {
+      free(thunk);
+      thunk = nullptr;
+    }
+    size = 0;
+  }
+};
+//////////////////////////////////////////////////////////////
+extern imprt_tbl IMPORT_TABLE;
+
+
 //////////////////////////////////////////////////////////////
 // load bytes to buffer -> FillBuff (already exists)
 // in cycle check every byte and translate to x86 bytecodes

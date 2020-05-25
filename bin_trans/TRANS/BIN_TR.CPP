@@ -4,6 +4,9 @@
 ////// JUMP TABLE ////////////////////////
 jmp_table TABLE;
 //////////////////////////////////////////
+////// IMPORT TABLE //////////////////////
+imprt_tbl IMPORT_TABLE;
+//////////////////////////////////////////
 
 // default constructor
 buffer::buffer( void ) : buf(nullptr),
@@ -214,7 +217,7 @@ int jmp_table::JmpProcess( char *adasm_ptr, char *x86_ptr )
  **/
 bool CreateExe( const char filename[], const buffer &out )
 {
-  const size_t stub_size = 30 * 16;
+  const size_t stub_size = SIZE_RAW;
   char stub[stub_size] = {0};
   FILE *exe = fopen(filename, "wb");
   size_t vrt_addr = ENTRY_POINT_ADDR,
@@ -232,16 +235,19 @@ bool CreateExe( const char filename[], const buffer &out )
 
   fwrite(&CreateSecHeader(".text", vrt_size, vrt_addr, size_raw, ptr_raw, CODE_CHAR), 
          sizeof(IMAGE_SECTION_HEADER), 1, exe);
-  fwrite(&CreateSecHeader(".idata", vrt_size, vrt_addr + vrt_size, size_raw, ptr_raw + size_raw, IDATA_CHAR), 
+  fwrite(&CreateSecHeader(".idata", vrt_size, IMPORT_START, size_raw, ptr_raw + size_raw, IDATA_CHAR), 
          sizeof(IMAGE_SECTION_HEADER), 1, exe);
-  fwrite(&CreateSecHeader(".data", vrt_size, vrt_addr + 2 * vrt_size, size_raw, ptr_raw + 2 * size_raw, DATA_CHAR), 
+  fwrite(&CreateSecHeader(".data", vrt_size, DATA_START, size_raw, ptr_raw + 2 * size_raw, DATA_CHAR), 
          sizeof(IMAGE_SECTION_HEADER), 1, exe);
 
-  fwrite(stub, sizeof(stub[0]), stub_size, exe);
+  fwrite(stub, sizeof(stub[0]), 30 * 16, exe);
 
   fwrite(out.buf, sizeof(out.buf[0]), out.size, exe);
 
+  IMPORT_TABLE.PutInFile(exe);
   
+  fwrite(stub, sizeof(stub[0]), stub_size, exe);
+
   fclose(exe);
   return true; 
 } /* End of 'CreateExe' function */
@@ -265,16 +271,16 @@ IMAGE_OPTIONAL_HEADER CreateOptHeader( void )
   {
     .Magic = 0x10b,
     .AddressOfEntryPoint = ENTRY_POINT_ADDR,
-    .ImageBase =  0x00400000,
+    .ImageBase = IMAGE_BASE,
     .SectionAlignment = ENTRY_POINT_ADDR,
     .FileAlignment = 0x200,
     .MajorSubsystemVersion = 4,
-    .SizeOfImage = 0x4000,
+    .SizeOfImage = 2 * 0x8000,
     .SizeOfHeaders = 0x400,
     .Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI,
     .NumberOfRvaAndSizes = 0x10,
   };
-  OPT_HDR.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = ENTRY_POINT_ADDR + VRT_SIZE;
+  OPT_HDR.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = IMPORT_START;
 
   return OPT_HDR;
 }
