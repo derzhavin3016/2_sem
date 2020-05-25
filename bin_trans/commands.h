@@ -41,6 +41,11 @@
 
 #define WORD(COM) PUT_WORD_CMD(COM)
 
+#define DLL_CALL(i)                                                                                        \
+    WORD(0xFF15);                                                                                          \
+    *((unsigned int *)(buf_out)) = (unsigned int)(IMAGE_BASE + IMPORT_START + IMPORT_TABLE.GetProcAddr(i));\
+    buf_out += sizeof(unsigned int);
+
 //---------------------------------------------------------------
 // IMPORTANT !!!!
 // adasm              x86
@@ -100,6 +105,7 @@ DEF_CMD(PUSH_REG, 11,
 
 DEF_CMD(PUSH_RAM, 12,
   {
+
   },
   {
     INC_PC;
@@ -204,6 +210,7 @@ DEF_CMD(DIV, 6,
 
 DEF_CMD(OUT, 7,
   {
+    DLL_CALL(3);
   },
   {})
 
@@ -324,6 +331,8 @@ DEF_CMD(RET, 41,
 
 DEF_CMD(IN, 42,
   {
+    DLL_CALL(4);
+    BYTE(PUSH_EAX);
   },
   {})
 
@@ -339,6 +348,10 @@ DEF_CMD(POW, 43,
 
 DEF_CMD(END, -1,
   {
+    BYTE(PUSH)
+    TO_INT(buf_out) = 0;
+    ADD_OUT(DATA_SIZE);
+    DLL_CALL(0);
   },
   {})
   // push 0
