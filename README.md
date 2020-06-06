@@ -11,5 +11,43 @@ ____
 - `out` -> взять число из стека и вывести на экран.
 - `end` -> завершить программу.
 
-Эти команды требовалось заменить на соответствующие функции. Для `end` такая функция уже есть - `ExitProcess` из `kernel32.dll`
+Эти команды требовалось заменить на соответствующие функции. Для `end` такая функция уже есть - `ExitProcess` из `kernel32.dll`.
+Для `in` и `out` были написаны функции `ad6scanf` и `ToDec`, так как эти функции работают только с числами, а стандартным 
+`scanf` и `printf`  требовалось бы передавать строку формата, что не очень удобно каждый раз.  
+Чтобы пользоваться этими функциями через таблицу импорта, была создана динамическая библиотека [ad6lib.dll](https://github.com/derzhavin3016/2_sem/blob/master/bin_trans/ad6lib.dll).  
 
+Для удобства подстановки команд x86 был создан файл [opcodes.h](https://github.com/derzhavin3016/2_sem/blob/master/bin_trans/opcodes.h).
+____
+Программе на вход поступает бинарный файл `.adasm`, полученный после работы моего процессора.
+Для обработки команд передачи управления, совершающих переход по меткам (`jmp`, `jxx`, `call`)
+была реализована структура `jmp_table`, хранящая информацию о всех переходах. Её элемент выглядит следующим образом:
+```
+struct jmp_inf         // structure for store information about jumps
+{
+  char *adasm_ptr;    // pointer to jmp command in adasm code
+  char *x86_ptr;      // pointer to jmp command in x86 code
+  char *adasm_dest;   // pointer to jump to in adasm code
+  char *x86_dest;     // pointer to jump to in x86 code (relative, count from next command)
+};
+
+```
+Был заведён массив таких структур - таблица переходов:
+```
+struct jmp_table
+{
+  jmp_inf table[JMP_SIZE];
+  size_t size;
+
+  jmp_table( void );
+
+  int JmpProcess( char *adasm_ptr, char *x86_ptr );
+
+  bool CmdProcess( char *adasm_addr, char *x86_addr, bool IsJmp = false );
+
+  bool PushOldInf( char *adasm_ptr, char *adasm_dest );
+};
+```
+Для подсчёта относительного адреса перехода, была реализована двупроходная трансляция.
+При первом проходе для каждой встреченной команды перехода создаётся новый элемент в таблице.
+В нём заполняются поля `adasm_ptr` и `adasm_dest`.
+Далее, при втором проходе перед каждой командой проверяется, является ли её адрес адресом назначения для какого-либо перехода, и если да, то в соответствующий(ие) элемент таблицы заносится `x86_dest`.
