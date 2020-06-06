@@ -27,7 +27,7 @@ struct jmp_inf         // structure for store information about jumps
   char *adasm_ptr;    // pointer to jmp command in adasm code
   char *x86_ptr;      // pointer to jmp command in x86 code
   char *adasm_dest;   // pointer to jump to in adasm code
-  char *x86_dest;     // pointer to jump to in x86 code (relative, count from next command)
+  char *x86_dest;     // pointer to jump to in x86 code
 };
 
 ```
@@ -50,4 +50,5 @@ struct jmp_table
 Для подсчёта относительного адреса перехода, была реализована двупроходная трансляция.
 При первом проходе для каждой встреченной команды перехода создаётся новый элемент в таблице.
 В нём заполняются поля `adasm_ptr` и `adasm_dest`.
-Далее, при втором проходе перед каждой командой проверяется, является ли её адрес адресом назначения для какого-либо перехода, и если да, то в соответствующий(ие) элемент(ы) таблицы заносится `x86_dest`.
+Далее, при втором проходе перед каждой командой проверяется, является ли её адрес адресом 
+назначения для какого-либо перехода, и если да, то в соответствующий(ие) элемент(ы) таблицы заносится `x86_dest` - адрес .
