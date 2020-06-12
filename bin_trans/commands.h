@@ -97,7 +97,7 @@ DEF_CMD(PUSH, 1,
 DEF_CMD(PUSH_REG, 11,
   {
     CUR_OUT_CODE = PUSH_EAX;
-    CHECK_REG(push, 6, 7, 1, 2);
+    CHECK_REG(push, 6, 3, 7, 2);
   },
   {
     INC_PC;
@@ -138,7 +138,7 @@ DEF_CMD(ADD, 2,
 DEF_CMD(POP, 3,
   {
     CUR_OUT_CODE = POP_EAX;
-    CHECK_REG(pop, 6, 7, 1, 2)
+    CHECK_REG(pop, 6, 3, 7, 2)
   },
   {
     INC_PC;
