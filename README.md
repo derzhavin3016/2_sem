@@ -1,4 +1,8 @@
 # 2_sem
+![GitHub repo size](https://img.shields.io/github/repo-size/derzhavin3016/2_sem?style=for-the-badge)
+![GitHub last commit](https://img.shields.io/github/last-commit/derzhavin3016/2_sem?color=red&style=for-the-badge)
+![GitHub lines](https://img.shields.io/tokei/lines/github/derzhavin3016/2_sem?style=for-the-badge)
+
 Этот репозиторий содежит задания из моего второго семестра обучения на ФРКТ. Далее следует краткий обзор некоторых задач.
 
 ## Бинарный транслятор
